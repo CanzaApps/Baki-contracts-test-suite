@@ -177,4 +177,57 @@ contract VaultTest is Test {
         console2.log("user E collateral ratio after swap =", vault.getUserCollateralRatio(e));
     }
 
+    function test_zeroDebts() public {
+         address a = address(0x1111);
+
+         collateral.transfer(a, 150 * 1e18);
+
+         console2.log("DEPOSIT AND MINT...........................................");
+
+        vm.startPrank(a);
+        vault.depositAndMint(150 * 1e18, 0 * 1e18);
+        vm.stopPrank();
+        console2.log("user A collateral ratio after deposit =", vault.returnLastCollateralRatio(a));
+
+        console2.log("WITHDRAWALS...........................................");
+
+        vm.startPrank(a);
+        vault.repayAndWithdraw(0, 100 * 1e18, "zusd");
+        vm.stopPrank();
+        console2.log("user A collateral ratio after first withdrawal =", vault.returnLastCollateralRatio(a));
+
+        vm.startPrank(a);
+        vault.repayAndWithdraw(0, 50 * 1e18, "zngn");
+        vm.stopPrank();
+        console2.log("user A collateral ratio after second withdrawals =", vault.returnLastCollateralRatio(a));
+    }
+
+    function test_Liquidation() public {
+        address a = address(0x1111);
+
+         collateral.transfer(a, 150 * 1e18);
+
+         console2.log("DEPOSIT AND MINT...........................................");
+
+        vm.startPrank(a);
+        vault.depositAndMint(150 * 1e18, 100 * 1e18);
+        vm.stopPrank();
+        console2.log("user A collateral ratio after deposit =", vault.returnLastCollateralRatio(a));
+
+        console2.log("SWAP TO ZNGN...........................................");
+
+        vm.startPrank(a);
+        vault.swap(100 * 1e18, "zusd", "zngn");
+        vm.stopPrank();
+        console2.log("user A collateral ratio after swap =", vault.getUserCollateralRatio(a));
+
+        console2.log("ZNGN STRENGTHENS IN VALUE..................................");
+
+        oracle.setZTokenUSDValue("zngn", 500000); 
+
+        console2.log("check user for liquidation", vault.checkUserForLiquidation(a));
+
+        console2.log("user A collateral ratio after swap =", vault.getUserCollateralRatio(a));
+
+    }
 }

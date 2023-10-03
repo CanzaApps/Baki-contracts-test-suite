@@ -951,17 +951,22 @@ contract Vault is
     }
 
     function getUserCollateralRatio(address user) public view returns (uint256) {
-         uint256 USDValueOfCollateral;
+        uint256 USDValueOfCollateral;
+        uint256 userDebt = getUserDebt(user);
 
         USDValueOfCollateral = getUSDValueOfCollateral(
             userCollateralBalance[user]
         );
 
-        uint256 x = WadRayMath.wadDiv(USDValueOfCollateral, getUserDebt(user));
+        if( userDebt != 0) {
+            uint256 x = WadRayMath.wadDiv(USDValueOfCollateral, userDebt);
 
-        x = x / HALF_MULTIPLIER;
+            x = x / HALF_MULTIPLIER;
 
-        return x;
+            return x;
+        }
+
+        return USDValueOfCollateral;
     }
 
     function returnLastCollateralRatio(address user) public view returns (uint256) {
@@ -972,7 +977,7 @@ contract Vault is
     /**
      * Get User Outstanding Debt
      */
- function _updateUserDebtOutstanding(
+    function _updateUserDebtOutstanding(
         uint256 _netMintUserzUSDValue,
         uint256 _netMintGlobalzUSDValue
     ) internal view returns (uint256) {
