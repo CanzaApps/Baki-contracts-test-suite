@@ -122,6 +122,21 @@ contract VaultTest is Test {
         console2.log("user debt E after swap =", vault.getUserDebt(e));
     }
 
+    function test_USDValueOfCollateral() public {
+         address a = address(0x1111);
+
+         collateral.transfer(a, 150 * 1e18);
+
+         uint256 amount = 150 * 1e18;
+
+        vm.startPrank(a);
+         uint256 result = vault.getUSDValueOfCollateral(amount);
+         uint256 balance = vault.getUserCollateralBalance();
+        vm.stopPrank();
+         console2.log("USD Value Of Collateral =", result);
+         console2.log("USD Value Of Collateral =", balance);
+    }
+
     function test_CollateralRatio() public {
         address a = address(0x1111);
         address b = address(0x2222);
@@ -157,7 +172,7 @@ contract VaultTest is Test {
         console2.log("user D collateral ratio after deposit =", vault.returnLastCollateralRatio(d));
 
          vm.startPrank(e);
-        vault.depositAndMint(150 * 1e18, 100 * 1e18);
+        vault.depositAndMint(90 * 1e18, 0 * 1e18);
         vm.stopPrank();
         console2.log("user E collateral ratio after deposit =", vault.returnLastCollateralRatio(e));
 
@@ -188,6 +203,7 @@ contract VaultTest is Test {
         vault.depositAndMint(150 * 1e18, 0 * 1e18);
         vm.stopPrank();
         console2.log("user A collateral ratio after deposit =", vault.returnLastCollateralRatio(a));
+        console2.log("After deposit and mint, user debt A =", vault.getNetUserMintValue(a));
 
         console2.log("WITHDRAWALS...........................................");
 
@@ -228,6 +244,65 @@ contract VaultTest is Test {
         console2.log("check user for liquidation", vault.checkUserForLiquidation(a));
 
         console2.log("user A collateral ratio after swap =", vault.getUserCollateralRatio(a));
+
+    }
+
+    function test_FreeMint() public {
+        address a = address(0x1111);
+        address b = address(0x2222);
+        address c = address(0x3333);
+    
+        collateral.transfer(a, 150 * 1e18);
+        collateral.transfer(b, 150 * 1e18);
+
+        console2.log("DEPOSIT AND MINT...........................................");
+        
+        vm.startPrank(a);
+        vault.depositAndMint(150 * 1e18, 100 * 1e18);
+        vm.stopPrank();
+    
+        vm.startPrank(b);
+        vault.depositAndMint(150 * 1e18, 100 * 1e18);
+        vm.stopPrank();
+        console2.log("After deposit and mint, global debt =", vault.getGlobalDebt());
+        console2.log("After deposit and mint, net mint global =", vault.netMintGlobal());
+        console2.log("After deposit and mint, user debt A =", vault.getUserDebt(a));
+        console2.log("After deposit and mint, user debt B =", vault.getUserDebt(b));
+
+        console2.log("USER B SWAP zusd FOR zngn...........................................");
+
+        vm.startPrank(b);
+        vault.swap(100 * 1e18, "zusd", "zngn");
+        vm.stopPrank();
+
+        console2.log("After swap, global debt =", vault.getGlobalDebt());
+        console2.log("After swap, net mint global =", vault.netMintGlobal());
+        console2.log("After swap, user debt A =", vault.getUserDebt(a));
+        console2.log("After swap, user debt B =", vault.getUserDebt(b));
+        
+        console2.log("zngn PRICE GOES UP...........................................");
+
+        oracle.setZTokenUSDValue("zngn", 5000);
+        console2.log("After price change, global debt =", vault.getGlobalDebt());
+        console2.log("After price change, net mint global =", vault.netMintGlobal());
+        
+        console2.log("Free Mint...........................................");
+       
+        vm.startPrank(c);
+         uint256 mintAmount = vault.getGlobalDebt() / vault.netMintGlobal() ;
+        console2.log("mint amount before initial deposit =", mintAmount);
+        for (uint i = 0; i< 1000; i++){
+            vault.depositAndMint(0, mintAmount);
+            mintAmount = vault.getGlobalDebt() / vault.netMintGlobal();
+            console2.log("user net mint during free mint =", vault.getNetUserMintValue(c));
+            console2.log("during free mint, user debt c =", vault.getUserDebt(c));
+           
+        }
+        vm.stopPrank();
+        
+        console2.log("After free mint, global debt =", vault.getGlobalDebt());
+        console2.log("After free mint, net global mint =", vault.netMintGlobal());
+        console2.log("After free mint, c's zusd balance =", ZToken(zusd).balanceOf(address(c)));
 
     }
 }

@@ -97,7 +97,9 @@ contract Vault is
 
     bytes32 public constant CONTROLLER = keccak256("CONTROLLER");
 
-    mapping(address => uint256) public userCollateralRatio;
+    mapping(address => uint256) public lastUserCollateralRatio;
+
+     uint256 public netMintChange;
 
     /**
      * Initializers
@@ -197,8 +199,6 @@ contract Vault is
 
         uint256 globalDebt = getGlobalDebt();
 
-        uint256 netMintChange;
-
         _mint(zUSD, msg.sender, _mintAmount);
 
         if(globalDebt == 0 || netMintGlobal == 0) {
@@ -206,7 +206,11 @@ contract Vault is
         } else {
             netMintChange = netMintGlobal * _mintAmount * MULTIPLIER / globalDebt;
 
-            netMintChange = netMintChange / MULTIPLIER ;
+            if (netMintChange < MULTIPLIER && netMintChange > 0) {
+                netMintChange = 1;
+            } else {
+                netMintChange = netMintChange / MULTIPLIER;
+            }
         }
 
         grossMintUser[msg.sender] += _mintAmount;
@@ -222,9 +226,9 @@ contract Vault is
             isMinter[msg.sender] = true;
         }
 
-        userCollateralRatio[msg.sender] = getUserCollateralRatio(msg.sender);
+        lastUserCollateralRatio[msg.sender] = getUserCollateralRatio(msg.sender);
 
-        _testImpact();
+        // _testImpact();
 
          IERC20Upgradeable(collateral).safeTransferFrom(
             msg.sender,
@@ -362,7 +366,7 @@ contract Vault is
 
         totalCollateral -= _amountToWithdraw;
 
-        userCollateralRatio[msg.sender] = getUserCollateralRatio(msg.sender);
+        lastUserCollateralRatio[msg.sender] = getUserCollateralRatio(msg.sender);
 
         _testImpact();
 
@@ -843,7 +847,7 @@ contract Vault is
      */
     function getUSDValueOfCollateral(
         uint256 _amount
-    ) internal view returns (uint256) {
+    ) public view returns (uint256) {
         uint256 USDValue;
         uint256 rate;
 
@@ -914,7 +918,7 @@ contract Vault is
     }
 
     function returnLastCollateralRatio(address user) public view returns (uint256) {
-        return userCollateralRatio[user];
+        return lastUserCollateralRatio[user];
     }
 
     /**

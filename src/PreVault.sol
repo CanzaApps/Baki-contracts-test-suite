@@ -208,7 +208,11 @@ contract Vault is
         } else {
             netMintChange = netMintGlobal * _mintAmount * MULTIPLIER / globalDebt;
 
-            netMintChange = netMintChange / MULTIPLIER ;
+            if (netMintChange < MULTIPLIER && netMintChange > 0) {
+                netMintChange = 1;
+            } else {
+                netMintChange = netMintChange / MULTIPLIER;
+            }
         }
 
         grossMintUser[msg.sender] += _mintAmount;
